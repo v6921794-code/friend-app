@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friend - Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<main>
+  <h1>Friend Admin</h1>
+
+  <p>Report management panel</p>
+
+  <input
+    id="adminKey"
+    type="password"
+    placeholder="Admin key"
+  >
+
+  <button id="loadBtn" type="button">
+    Load Reports
+  </button>
+
+  <p id="status"></p>
+
+  <div id="reports"></div>
+</main>
+
+<script>
+const adminKey = document.getElementById("adminKey");
+const loadBtn = document.getElementById("loadBtn");
+const statusBox = document.getElementById("status");
+const reportsBox = document.getElementById("reports");
+
+async function loadReports() {
+  const key = adminKey.value.trim();
+
+  if (!key) {
+    statusBox.textContent = "Enter admin key.";
+    return;
+  }
+
+  statusBox.textContent = "Loading...";
+  reportsBox.innerHTML = "";
+
+  try {
+    const response = await fetch("/api/admin/reports", {
+      headers: {
+        "x-admin-key": key
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Access denied.");
+    }
+
+    if (!data.reports.length) {
+      reportsBox.innerHTML =
+        "<p>No reports found.</p>";
+      statusBox.textContent = "Done.";
+      return;
+    }
+
+    data.reports.forEach(report => {
+      const card = document.createElement("div");
+
+      card.style.padding = "15px";
+      card.style.margin = "12px 0";
+      card.style.border = "1px solid #475569";
+      card.style.borderRadius = "12px";
+      card.style.background = "#1e293b";
+
+      const title = document.createElement("h3");
+      title.textContent =
+        "Report #" + report.id;
+
+      const info = document.createElement("p");
+      info.textContent =
+        "Reason: " + report.reason +
+        " | Status: " + report.status;
+
+      const openBtn = document.createElement("button");
+      openBtn.textContent = "Mark Reviewed";
+
+      openBtn.onclick = async () => {
+        await fetch("/api/admin/report-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": key
+          },
+          body: JSON.stringify({
+            id: report.id,
+            status: "reviewed"
+          })
+        });
+
+        loadReports();
+      };
+
+      card.appendChild(title);
+      card.appendChild(info);
+      card.appendChild(openBtn);
+
+      reportsBox.appendChild(card);
+    });
+
+    statusBox.textContent =
+      "Reports loaded.";
+  } catch (error) {
+    statusBox.textContent = error.message;
+  }
+}
+
+loadBtn.addEventListener(
+  "click",
+  loadReports
+);
+</script>
+
+</body>
+</html>

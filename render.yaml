@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: friend-app
+    runtime: node
+    buildCommand: npm ci
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_KEY
+        generateValue: true

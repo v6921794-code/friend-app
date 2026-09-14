@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Friend</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+<!-- AUTH -->
+
+<div id="authScreen" class="login-screen">
+
+  <div class="login-box">
+
+    <h1>Friend</h1>
+
+    <p id="authTitle">
+      Create your account
+    </p>
+
+    <div class="notice">
+      🔞 Friend is available only for users aged 18+.
+    </div>
+
+    <input
+      id="authIdentifier"
+      type="text"
+      placeholder="Email or mobile number"
+      autocomplete="username"
+    >
+
+    <input
+      id="authPassword"
+      type="password"
+      placeholder="Password (8+ characters)"
+      autocomplete="current-password"
+    >
+
+    <div id="dobArea">
+
+      <label for="authDob">
+        Date of Birth
+      </label>
+
+      <input
+        id="authDob"
+        type="date"
+      >
+
+    </div>
+
+    <button
+      id="authButton"
+      type="button"
+    >
+      Create Account
+    </button>
+
+    <p
+      id="authMessage"
+      class="auth-message"
+    ></p>
+
+    <button
+      id="switchAuth"
+      type="button"
+      class="switch-button"
+    >
+      Already have an account? Login
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- MAIN APP -->
+
+<div
+  id="app"
+  class="app hidden"
+>
+
+  <header>
+
+    <div class="logo">
+      Friend
+    </div>
+
+    <div class="header-right">
+
+      <span class="age-badge">
+        18+
+      </span>
+
+      <button
+        id="profileBtn"
+        type="button"
+      >
+        👤 Profile
+      </button>
+
+      <button
+        id="settingsBtn"
+        type="button"
+      >
+        ⚙️ Settings
+      </button>
+
+      <button
+        id="logoutBtn"
+        type="button"
+      >
+        Logout
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <main>
+
+    <!-- VIDEO -->
+
+    <section class="video-area">
+
+      <div class="video-card">
+
+        <video
+          id="strangerVideo"
+          autoplay
+          playsinline
+        ></video>
+
+        <div class="video-label">
+          Stranger
+        </div>
+
+      </div>
+
+
+      <div class="video-card">
+
+        <video
+          id="myVideo"
+          autoplay
+          muted
+          playsinline
+        ></video>
+
+        <div class="video-label">
+          You
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- STATUS -->
+
+    <div
+      id="status"
+      class="status"
+    >
+      Ready to find a friend.
+    </div>
+
+
+    <!-- CONTROLS -->
+
+    <section class="controls">
+
+      <button
+        id="startBtn"
+        type="button"
+      >
+        ▶ Start
+      </button>
+
+      <button
+        id="nextBtn"
+        type="button"
+      >
+        ⏭ Next
+      </button>
+
+      <button
+        id="micBtn"
+        type="button"
+      >
+        🎤 Mic
+      </button>
+
+      <button
+        id="cameraBtn"
+        type="button"
+      >
+        📷 Camera
+      </button>
+
+      <button
+        id="stopBtn"
+        type="button"
+      >
+        ⏹ Stop
+      </button>
+
+    </section>
+
+
+    <!-- CHAT -->
+
+    <section class="chat">
+
+      <div class="chat-header">
+
+        <div class="chat-title">
+          💬 Chat
+        </div>
+
+        <div class="safety-controls">
+
+          <button
+            id="clearBtn"
+            type="button"
+          >
+            🧹 Clear
+          </button>
+
+          <button
+            id="reportBtn"
+            type="button"
+          >
+            ⚠️ Report
+          </button>
+
+          <button
+            id="blockBtn"
+            type="button"
+          >
+            🚫 Block
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="messages"
+        class="messages"
+      ></div>
+
+
+      <div class="chat-input">
+
+        <input
+          id="messageInput"
+          type="text"
+          maxlength="500"
+          placeholder="Type a message..."
+        >
+
+        <button
+          id="sendBtn"
+          type="button"
+        >
+          ➤
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <div class="safety-note">
+
+      Never share your password, OTP, address,
+      school/college details or other private information.
+
+      If someone behaves badly,
+      use Report or Block.
+
+    </div>
+
+  </main>
+
+
+  <!-- PROFILE PANEL -->
+
+  <div
+    id="profilePanel"
+    class="modal hidden"
+  >
+
+    <div class="modal-box">
+
+      <div class="modal-header">
+
+        <h2>
+          👤 My Profile
+        </h2>
+
+        <button
+          id="closeProfile"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <label>
+        Username
+      </label>
+
+      <input
+        id="profileUsername"
+        type="text"
+        maxlength="30"
+        placeholder="Your username"
+      >
+
+
+      <label>
+        Bio
+      </label>
+
+      <textarea
+        id="profileBio"
+        maxlength="250"
+        placeholder="Tell something about yourself..."
+      ></textarea>
+
+
+      <label>
+        Account
+      </label>
+
+      <input
+        id="profileIdentifier"
+        type="text"
+        disabled
+      >
+
+
+      <label>
+        Date of Birth
+      </label>
+
+      <input
+        id="profileDob"
+        type="date"
+        disabled
+      >
+
+
+      <button
+        id="saveProfileBtn"
+        type="button"
+      >
+        💾 Save Profile
+      </button>
+
+
+      <p
+        id="profileMessage"
+        class="panel-message"
+      ></p>
+
+    </div>
+
+  </div>
+
+
+  <!-- SETTINGS PANEL -->
+
+  <div
+    id="settingsPanel"
+    class="modal hidden"
+  >
+
+    <div class="modal-box">
+
+      <div class="modal-header">
+
+        <h2>
+          ⚙️ Settings
+        </h2>
+
+        <button
+          id="closeSettings"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <div class="setting-row">
+
+        <div>
+          <strong>
+            Notifications
+          </strong>
+
+          <small>
+            Allow app notifications
+          </small>
+        </div>
+
+        <input
+          id="notificationsToggle"
+          type="checkbox"
+        >
+
+      </div>
+
+
+      <hr>
+
+
+      <h3>
+        🔐 Change Password
+      </h3>
+
+      <input
+        id="oldPassword"
+        type="password"
+        placeholder="Current password"
+      >
+
+      <input
+        id="newPassword"
+        type="password"
+        placeholder="New password (8+ characters)"
+      >
+
+      <button
+        id="changePasswordBtn"
+        type="button"
+      >
+        Change Password
+      </button>
+
+
+      <p
+        id="settingsMessage"
+        class="panel-message"
+      ></p>
+
+
+      <hr>
+
+
+      <div class="legal-links">
+
+        <a
+          href="/privacy.html"
+          target="_blank"
+        >
+          Privacy Policy
+        </a>
+
+        <a
+          href="/terms.html"
+          target="_blank"
+        >
+          Terms
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/app.js?v=1000"></script>
+
+</body>
+</html>

@@ -1,0 +1,125 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* AUTH */
+
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #0f172a;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px;
+  border-radius: 20px;
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+.login-box h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 42px;
+}
+
+.login-box > p {
+  text-align: center;
+  color: #cbd5e1;
+}
+
+.notice {
+  margin: 18px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #3f1d1d;
+  color: #fecaca;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-box input,
+.modal-box input,
+.modal-box textarea {
+  width: 100%;
+  margin: 8px 0;
+  padding: 13px;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #0f172a;
+  color: white;
+  outline: none;
+}
+
+.login-box input:focus,
+.modal-box input:focus,
+.modal-box textarea:focus {
+  border-color: #60a5fa;
+}
+
+.login-box label,
+.modal-box label {
+  display: block;
+  margin-top: 10px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.login-box button,
+.modal-box button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+}
+
+.switch-button {
+  background: transparent !important;
+  color: #93c5fd !important;
+}
+
+.auth-message,
+.panel-message {
+  min-height: 20px;
+  color: #fca5a5;
+  font-size: 14px;
+}
+
+/* HEADER */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items:
