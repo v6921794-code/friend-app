@@ -32,6 +32,14 @@ app.use(helmet({
 
 app.use(express.json({ limit: "100kb" }));
 
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    app: "Friend",
+    status: "online"
+  });
+});
+
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
