@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: friend-app
+    name: friend-app-1
     runtime: node
     buildCommand: npm ci
     startCommand: node server.js
+    autoDeploy: yes
     envVars:
       - key: NODE_ENV
         value: production
@@ -11,3 +12,7 @@ services:
         generateValue: true
       - key: ADMIN_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: friend-app-db
+          property: connectionString
