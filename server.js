@@ -9,12 +9,40 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const fs = require("fs");
 const path = require("path");
+const { Pool } = require("pg");
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false
+});
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+async function initDatabase() {
+  if (!process.env.DATABASE_URL) {
+    console.log("DATABASE_URL not set. Using users.json.");
+    return;
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      identifier TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      dob DATE NOT NULL,
+      username TEXT NOT NULL,
+      bio TEXT NOT NULL DEFAULT '',
+      notifications BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  console.log("PostgreSQL users table ready.");
+}
 const JWT_SECRET =
   process.env.JWT_SECRET || "CHANGE_THIS_SECRET_BEFORE_PUBLIC_DEPLOYMENT";
 
@@ -85,9 +113,30 @@ function calculateAge(dob) {
   return age;
 }
 
-function getUserFromToken(token) {
+async function getUserFromToken(token) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (process.env.DATABASE_URL) {
+      const result = await pool.query(
+        `SELECT
+          id,
+          identifier,
+          password_hash AS "passwordHash",
+          dob,
+          username,
+          bio,
+          notifications,
+          created_at AS "createdAt"
+         FROM users
+         WHERE id = $1
+         LIMIT 1`,
+        [decoded.userId]
+      );
+
+      return result.rows[0] || null;
+    }
+
     const users = readJSON(usersFile);
 
     return users.find(
@@ -158,37 +207,74 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    const users = readJSON(usersFile);
-
-    const exists = users.some(
-      user =>
-        user.identifier.toLowerCase() ===
-        identifier.toLowerCase()
-    );
-
-    if (exists) {
-      return res.status(409).json({
-        success: false,
-        message: "Account already exists."
-      });
-    }
-
     const passwordHash =
       await bcrypt.hash(password, 12);
 
-    const user = {
-      id: Date.now().toString(),
-      identifier,
-      passwordHash,
-      dob,
-      username: username || `Friend${Date.now().toString().slice(-4)}`,
-      bio: "",
-      notifications: true,
-      createdAt: new Date().toISOString()
-    };
+    const finalUsername =
+      username || `Friend${Date.now().toString().slice(-4)}`;
 
-    users.push(user);
-    writeJSON(usersFile, users);
+    let user;
+
+    if (process.env.DATABASE_URL) {
+      const id = Date.now().toString();
+
+      try {
+        const result = await pool.query(
+          `INSERT INTO users
+            (id, identifier, password_hash, dob, username, bio, notifications)
+           VALUES ($1, $2, $3, $4, $5, '', TRUE)
+           RETURNING
+             id,
+             identifier,
+             password_hash AS "passwordHash",
+             dob,
+             username,
+             bio,
+             notifications,
+             created_at AS "createdAt"`,
+          [id, identifier, passwordHash, dob, finalUsername]
+        );
+
+        user = result.rows[0];
+      } catch (error) {
+        if (error.code === "23505") {
+          return res.status(409).json({
+            success: false,
+            message: "Account already exists."
+          });
+        }
+        throw error;
+      }
+    } else {
+      const users = readJSON(usersFile);
+
+      const exists = users.some(
+        item =>
+          item.identifier.toLowerCase() ===
+          identifier.toLowerCase()
+      );
+
+      if (exists) {
+        return res.status(409).json({
+          success: false,
+          message: "Account already exists."
+        });
+      }
+
+      user = {
+        id: Date.now().toString(),
+        identifier,
+        passwordHash,
+        dob,
+        username: finalUsername,
+        bio: "",
+        notifications: true,
+        createdAt: new Date().toISOString()
+      };
+
+      users.push(user);
+      writeJSON(usersFile, users);
+    }
 
     const token = jwt.sign(
       { userId: user.id },
@@ -222,13 +308,35 @@ app.post("/api/login", async (req, res) => {
     const password =
       String(req.body.password || "");
 
-    const users = readJSON(usersFile);
+    let user;
 
-    const user = users.find(
-      item =>
-        item.identifier.toLowerCase() ===
-        identifier.toLowerCase()
-    );
+    if (process.env.DATABASE_URL) {
+      const result = await pool.query(
+        `SELECT
+          id,
+          identifier,
+          password_hash AS "passwordHash",
+          dob,
+          username,
+          bio,
+          notifications,
+          created_at AS "createdAt"
+         FROM users
+         WHERE LOWER(identifier) = LOWER($1)
+         LIMIT 1`,
+        [identifier]
+      );
+
+      user = result.rows[0] || null;
+    } else {
+      const users = readJSON(usersFile);
+
+      user = users.find(
+        item =>
+          item.identifier.toLowerCase() ===
+          identifier.toLowerCase()
+      ) || null;
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -281,7 +389,7 @@ app.post("/api/login", async (req, res) => {
 
 /* AUTH MIDDLEWARE */
 
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const header = req.headers.authorization || "";
 
   const token =
@@ -290,7 +398,7 @@ function auth(req, res, next) {
       : null;
 
   const user =
-    getUserFromToken(token);
+    await getUserFromToken(token);
 
   if (!user) {
     return res.status(401).json({
@@ -508,12 +616,13 @@ function disconnectPartner(socket) {
   socket.partner = null;
 }
 
-io.use((socket, next) => {
-  const token =
-    socket.handshake.auth?.token;
+io.use(async (socket, next) => {
+  try {
+    const token =
+      socket.handshake.auth?.token;
 
-  const user =
-    getUserFromToken(token);
+    const user =
+      await getUserFromToken(token);
 
   if (!user) {
     return next(
@@ -527,8 +636,12 @@ io.use((socket, next) => {
     );
   }
 
-  socket.user = user;
-  next();
+    socket.user = user;
+    next();
+  } catch (error) {
+    console.error("Socket authentication error:", error);
+    next(new Error("Authentication required."));
+  }
 });
 
 io.on("connection", socket => {
@@ -788,12 +901,19 @@ app.get("/", (req, res) => {
   );
 });
 
-server.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log(
-      `Friend App server running on port ${PORT}`
+initDatabase()
+  .then(() => {
+    server.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log(
+          `Friend App server running on port ${PORT}`
+        );
+      }
     );
-  }
-);
+  })
+  .catch(error => {
+    console.error("Database initialization failed:", error);
+    process.exit(1);
+  });
