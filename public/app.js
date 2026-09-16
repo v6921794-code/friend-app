@@ -318,7 +318,6 @@ async function startCamera() {
 
     myVideo.srcObject = localStream;
 
-    await getCameraDevices();
 
     return true;
   } catch (error) {
