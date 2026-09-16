@@ -546,70 +546,36 @@ micBtn.addEventListener("click", () => {
     : "🔇 Mic Off";
 });
 
-let cameraDevices = [];
-let currentCameraIndex = 0;
+let currentFacingMode = "user";
 
-async function getCameraDevices() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    cameraDevices = devices.filter(
-      device => device.kind === "videoinput"
-    );
-  } catch (error) {
-    console.error("Camera devices error:", error);
-  }
-}
-
-async function switchToCamera(index) {
+async function switchCamera() {
   if (!localStream) {
     const ready = await startCamera();
     if (!ready) return;
   }
 
-  const oldTrack = localStream.getVideoTracks()[0];
-  const oldSettings = oldTrack?.getSettings?.() || {};
-  const oldFacing = oldSettings.facingMode || "user";
+  const oldVideoTrack = localStream.getVideoTracks()[0];
 
-  const targetFacing =
-    oldFacing === "environment" ? "user" : "environment";
+  currentFacingMode =
+    currentFacingMode === "user"
+      ? "environment"
+      : "user";
 
   try {
-    let newStream;
-
-    // First try Android/browser facing-mode support
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({
+    const newStream =
+      await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: targetFacing }
+          facingMode: {
+            exact: currentFacingMode
+          }
         },
         audio: false
       });
-    } catch (firstError) {
-      // Fallback: use another detected camera device
-      await getCameraDevices();
-
-      const currentDeviceId = oldSettings.deviceId;
-
-      const otherCamera = cameraDevices.find(
-        device => device.deviceId !== currentDeviceId
-      );
-
-      if (!otherCamera) {
-        throw firstError;
-      }
-
-      newStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { exact: otherCamera.deviceId }
-        },
-        audio: false
-      });
-    }
 
     const newTrack = newStream.getVideoTracks()[0];
 
     if (!newTrack) {
-      throw new Error("No video track available");
+      throw new Error("No camera track");
     }
 
     if (peer) {
@@ -622,11 +588,12 @@ async function switchToCamera(index) {
       }
     }
 
-    if (oldTrack) {
-      oldTrack.stop();
+    if (oldVideoTrack) {
+      oldVideoTrack.stop();
     }
 
-    const audioTracks = localStream.getAudioTracks();
+    const audioTracks =
+      localStream.getAudioTracks();
 
     localStream = new MediaStream([
       newTrack,
@@ -635,20 +602,27 @@ async function switchToCamera(index) {
 
     myVideo.srcObject = localStream;
 
-    const actualFacing =
-      newTrack.getSettings?.().facingMode || targetFacing;
-
-    if (actualFacing === "environment") {
-      backCameraBtn.textContent = "🔄 Front Camera";
+    if (currentFacingMode === "environment") {
+      backCameraBtn.textContent =
+        "🔄 Front Camera";
       setStatus("Back camera active.");
     } else {
-      backCameraBtn.textContent = "🔄 Back Camera";
+      backCameraBtn.textContent =
+        "🔄 Back Camera";
       setStatus("Front camera active.");
     }
 
   } catch (error) {
     console.error("Camera switch error:", error);
-    setStatus("Could not switch camera.");
+
+    currentFacingMode =
+      currentFacingMode === "user"
+        ? "environment"
+        : "user";
+
+    setStatus(
+      "Camera switch failed. Check camera permission."
+    );
   }
 }
 
@@ -658,7 +632,8 @@ cameraBtn.addEventListener("click", () => {
     return;
   }
 
-  const track = localStream.getVideoTracks()[0];
+  const track =
+    localStream.getVideoTracks()[0];
 
   if (!track) return;
 
@@ -673,17 +648,12 @@ const backCameraBtn =
   document.getElementById("backCameraBtn");
 
 if (backCameraBtn) {
-  backCameraBtn.addEventListener("click", async () => {
-    await getCameraDevices();
-
-    if (cameraDevices.length < 2) {
-      setStatus("Back camera was not detected.");
-      return;
-    }
-
-    await switchToCamera(currentCameraIndex + 1);
-  });
+  backCameraBtn.addEventListener(
+    "click",
+    switchCamera
+  );
 }
+
 function sendMessage() {
   const text = messageInput.value.trim();
 
