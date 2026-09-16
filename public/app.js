@@ -309,22 +309,21 @@ async function startCamera() {
   if (localStream) return true;
 
   try {
-    localStream =
-      await navigator.mediaDevices.getUserMedia({
-        video: {
-  facingMode: {
-    ideal: "user"
-  }
-},
-        audio: true
-      });
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "user" }
+      },
+      audio: true
+    });
 
     myVideo.srcObject = localStream;
+
+    await getCameraDevices();
+
     return true;
-  } catch {
-    setStatus(
-      "Camera/microphone permission required."
-    );
+  } catch (error) {
+    console.error("Camera error:", error);
+    setStatus("Camera/microphone permission required.");
     return false;
   }
 }
@@ -562,29 +561,56 @@ async function getCameraDevices() {
 }
 
 async function switchToCamera(index) {
-  if (!cameraDevices.length) {
-    await getCameraDevices();
+  if (!localStream) {
+    const ready = await startCamera();
+    if (!ready) return;
   }
 
-  if (!cameraDevices.length) {
-    setStatus("No camera found.");
-    return;
-  }
+  const oldTrack = localStream.getVideoTracks()[0];
+  const oldSettings = oldTrack?.getSettings?.() || {};
+  const oldFacing = oldSettings.facingMode || "user";
 
-  currentCameraIndex =
-    (index + cameraDevices.length) % cameraDevices.length;
-
-  const device = cameraDevices[currentCameraIndex];
+  const targetFacing =
+    oldFacing === "environment" ? "user" : "environment";
 
   try {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: { exact: device.deviceId }
-      },
-      audio: false
-    });
+    let newStream;
+
+    // First try Android/browser facing-mode support
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: targetFacing }
+        },
+        audio: false
+      });
+    } catch (firstError) {
+      // Fallback: use another detected camera device
+      await getCameraDevices();
+
+      const currentDeviceId = oldSettings.deviceId;
+
+      const otherCamera = cameraDevices.find(
+        device => device.deviceId !== currentDeviceId
+      );
+
+      if (!otherCamera) {
+        throw firstError;
+      }
+
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: otherCamera.deviceId }
+        },
+        audio: false
+      });
+    }
 
     const newTrack = newStream.getVideoTracks()[0];
+
+    if (!newTrack) {
+      throw new Error("No video track available");
+    }
 
     if (peer) {
       const sender = peer.getSenders().find(
@@ -596,15 +622,11 @@ async function switchToCamera(index) {
       }
     }
 
-    const oldTrack = localStream?.getVideoTracks()[0];
-
     if (oldTrack) {
       oldTrack.stop();
     }
 
-    const audioTracks = localStream
-      ? localStream.getAudioTracks()
-      : [];
+    const audioTracks = localStream.getAudioTracks();
 
     localStream = new MediaStream([
       newTrack,
@@ -613,24 +635,14 @@ async function switchToCamera(index) {
 
     myVideo.srcObject = localStream;
 
-    const label =
-      (device.label || "").toLowerCase();
+    const actualFacing =
+      newTrack.getSettings?.().facingMode || targetFacing;
 
-    if (
-      label.includes("back") ||
-      label.includes("rear") ||
-      label.includes("environment")
-    ) {
-      cameraBtn.textContent = "📷 Camera On";
-      if (backCameraBtn) {
-        backCameraBtn.textContent = "📷 Back ✓";
-      }
+    if (actualFacing === "environment") {
+      backCameraBtn.textContent = "🔄 Front Camera";
       setStatus("Back camera active.");
     } else {
-      cameraBtn.textContent = "📷 Camera On";
-      if (backCameraBtn) {
-        backCameraBtn.textContent = "📷 Back";
-      }
+      backCameraBtn.textContent = "🔄 Back Camera";
       setStatus("Front camera active.");
     }
 
