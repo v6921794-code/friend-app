@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Friend</string>
+    <string name="title_activity_main">Friend</string>
+    <string name="package_name">com.vivek.friend</string>
+    <string name="custom_url_scheme">com.vivek.friend</string>
+</resources>
